@@ -1,0 +1,14 @@
+<Application
+    x:Class="Stratego.App"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Stratego">
+    <Application.DataTemplates>
+        <local:ViewLocator />
+    </Application.DataTemplates>
+
+    <Application.Styles>
+        <FluentTheme Mode="Light" />
+        <StyleInclude Source="/MainStyle.axaml" />
+    </Application.Styles>
+</Application>

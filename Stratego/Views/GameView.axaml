@@ -1,0 +1,89 @@
+<UserControl
+    x:Class="Stratego.Views.GameView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:Stratego.ViewModels"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    Background="Black"
+    mc:Ignorable="d">
+
+    <!--  Resource for data template of piece  -->
+    <UserControl.Resources>
+        <DataTemplate x:Key="PieceDataTemplate">
+            <Button
+                Padding="0"
+                Background="{Binding Background}"
+                Classes="piece"
+                Command="{Binding Click}">
+                <Grid>
+                    <Image Source="{Binding BackPiece}" />
+                    <Image Source="{Binding Image}" />
+                </Grid>
+            </Button>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid ColumnDefinitions="*,1.1*" RowDefinitions="4*,2*,4*">
+
+        <!--  Items Control to show enemy dead pices  -->
+        <ItemsControl ItemTemplate="{StaticResource PieceDataTemplate}" Items="{Binding EnemyDeadPieces}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="10" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+
+        <!--  Items Control to show dead pices  -->
+        <ItemsControl
+            Grid.Row="2"
+            ItemTemplate="{StaticResource PieceDataTemplate}"
+            Items="{Binding DeadPieces}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="10" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+
+        <!--  Grid that contains the image for the background and the board  -->
+        <Grid
+            Grid.RowSpan="3"
+            Grid.Column="1"
+            ColumnDefinitions="auto">
+            <Image
+                HorizontalAlignment="Center"
+                Source="{Binding Background}"
+                Stretch="Fill" />
+            <ItemsControl ItemTemplate="{StaticResource PieceDataTemplate}" Items="{Binding Field}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Rows="10" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </Grid>
+        <StackPanel IsVisible="{Binding GameInPrep}" Orientation="Vertical">
+            <Button Background="Red" Command="{Binding Chaos}">
+                Chaos
+            </Button>
+            <Button Background="Blue" Command="{Binding Enemy}">
+                Current / Chaos enemy field
+            </Button>
+            <Button Background="Yellow" Command="{Binding Clear}">
+                Clear
+            </Button>
+            <Button Background="Green" Command="{Binding Start}">
+                Start
+            </Button>
+        </StackPanel>
+        <StackPanel IsVisible="{Binding !GameInPrep}" Orientation="Vertical">
+            <Button Background="Red" Command="{Binding EnemyMove}">
+                move 1 down
+            </Button>
+        </StackPanel>
+    </Grid>
+</UserControl>
