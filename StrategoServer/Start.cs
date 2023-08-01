@@ -5,6 +5,7 @@ using System;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace StrategoServer
 {
@@ -25,16 +26,26 @@ namespace StrategoServer
             var ipEndPoint = new IPEndPoint(IPAddress.Any, 13);
             TcpListener listener = new TcpListener(ipEndPoint);
 
-            TcpClient player1, player2;
+            NetworkStream player1, player2;
 
             try
             {
                 Console.WriteLine("Listening");
                 listener.Start();
-                player1 = await listener.AcceptTcpClientAsync();
+                var temp = await listener.AcceptTcpClientAsync();
+                player1 = temp.GetStream();
+
+                var client = temp.Client;
+                
                 await SendMessage(player1);
-                player2 = await listener.AcceptTcpClientAsync();
+                Thread.Sleep(10_000);
+                await SendMessage(player1, 1);
+
+
+                var temp2 = await listener.AcceptTcpClientAsync();
+                player2 = temp2.GetStream();
                 await SendMessage(player2);
+                await SendMessage(player2, 10);
             }
             finally
             {
@@ -42,13 +53,27 @@ namespace StrategoServer
             }
         }
 
-        static async Task SendMessage(TcpClient handler)
+        static async Task SendMessage(NetworkStream stream)
+        {
+            string message = $"📅 {DateTime.Now} 🕛";
+            byte[] dateTimeBytes = Encoding.UTF8.GetBytes(message);
+            await stream.WriteAsync(dateTimeBytes, 0, dateTimeBytes.Length);
+        }
+
+        static async Task SendMessage(NetworkStream stream, byte i)
+        {
+            byte[] dateTimeBytes = new byte[] { i , 2, 3, 4, 5};
+            await stream.WriteAsync(dateTimeBytes, 0, dateTimeBytes.Length);
+        }
+
+
+        static async Task RecieveMessage(TcpClient handler)
         {
             using (NetworkStream stream = handler.GetStream())
             {
-                string message = $"📅 {DateTime.Now} 🕛";
-                byte[] dateTimeBytes = Encoding.UTF8.GetBytes(message);
-                await stream.WriteAsync(dateTimeBytes, 0, dateTimeBytes.Length);
+                byte[] buffer = new byte[2];
+                await stream.ReadAsync(buffer, 0, 2);
+                Console.WriteLine($"you recieved {buffer[0]} and {buffer[1]}");
             }
         }
 

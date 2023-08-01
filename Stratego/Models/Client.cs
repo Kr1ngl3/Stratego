@@ -19,12 +19,16 @@ namespace Stratego.Models
         }
 
         private IPEndPoint _ipEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 13);
-        private TcpClient _client = new TcpClient();
+        private NetworkStream _stream;
 
         public Client()
         {
-            _client.ConnectAsync(_ipEndPoint).Wait();
+            TcpClient tcpClient = new TcpClient();
+            tcpClient.ConnectAsync(_ipEndPoint).Wait();
+            _stream = tcpClient.GetStream();
         }
+
+
 
         public async Task<Piece.Color> GetColor()
         {
@@ -38,9 +42,8 @@ namespace Stratego.Models
 
         private async Task<byte[]> GetMessage()
         {
-            await using NetworkStream stream = _client.GetStream();
             byte[] buffer = new byte[1024];
-            int received = await stream.ReadAsync(buffer);
+            int received = await _stream.ReadAsync(buffer);
 
             return buffer;
         }
