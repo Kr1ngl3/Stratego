@@ -7,13 +7,14 @@ using System;
 using Avalonia.Controls.Mixins;
 using Avalonia.Controls;
 using ReactiveUI;
+using System.Threading.Tasks;
 
 namespace Stratego.ViewModels
 {
     class GameViewModel : ViewModelBase
     {
 
-        private readonly Board _board;
+        private Board _board = null!;
         private readonly Client _client = new Client();
 
         private AvaloniaList<ITileableViewModel> _field = new();
@@ -28,10 +29,7 @@ namespace Stratego.ViewModels
 
         public GameViewModel()
         {
-            InitializeLists();
-            _board.PiecesChanged += PropertyChangedOnPieces;
-            _board.PiecesMoved += PiecesMoved;
-            _board.ListsChanged += ReloadAll;
+            InitializeLists().Wait();
         }
 
         public void PiecesMoved(object? indexFromAndWhere, int indexTo)
@@ -117,8 +115,17 @@ namespace Stratego.ViewModels
                     _field.Add(new PieceViewModel((t as Piece)!));
         }
 
-        private void InitializeLists()
+        private async Task InitializeLists()
         {
+            Piece.Color color = await _client.GetColor();
+
+            _board = new Board(color);
+
+            _board.PiecesChanged += PropertyChangedOnPieces;
+            _board.PiecesMoved += PiecesMoved;
+            _board.ListsChanged += ReloadAll;
+
+
             foreach (ITileable t in _board.Field)
                 if (t is not Piece)
                     _field.Add(new TileViewModel((t as Tile)!));
