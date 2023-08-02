@@ -1,7 +1,15 @@
-﻿namespace Stratego.ViewModels
+﻿using ReactiveUI;
+
+namespace Stratego.ViewModels
 {
     public class MainWindowViewModel : ViewModelBase
     {
-        public ViewModelBase CurrentViewModel { get; set; } = new GameViewModel();
+        private ViewModelBase _currentViewModel;
+        public ViewModelBase CurrentViewModel { get => _currentViewModel; set => this.RaiseAndSetIfChanged(ref _currentViewModel, value, nameof(CurrentViewModel)); }
+
+        public MainWindowViewModel()
+        {
+            _currentViewModel = new ConnectViewModel(this);
+        }
     }
 }

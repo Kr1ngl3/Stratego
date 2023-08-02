@@ -8,14 +8,14 @@ using Avalonia.Controls.Mixins;
 using Avalonia.Controls;
 using ReactiveUI;
 using System.Threading.Tasks;
+using Avalonia.Metadata;
 
 namespace Stratego.ViewModels
 {
     class GameViewModel : ViewModelBase
     {
 
-        private Board _board = null!;
-        private readonly Client _client = new Client();
+        private readonly Board _board = null!;
 
         private AvaloniaList<ITileableViewModel> _field = new();
         private AvaloniaList<ITileableViewModel> _enemyDeadPieces = new();
@@ -26,10 +26,19 @@ namespace Stratego.ViewModels
         public IEnumerable<ITileableViewModel> Field => _field;
         public IEnumerable<ITileableViewModel> EnemyDeadPieces => _enemyDeadPieces;
         public IEnumerable<ITileableViewModel> DeadPieces => _deadPieces;
+        public bool StartActive => _board.EnemyPieceDataRecieved && _board.DeadPiecesCount == 0;
 
-        public GameViewModel()
+        public GameViewModel(Piece.Color color, Client _client)
         {
-            InitializeLists().Wait();
+
+            _board = new Board(color, _client);
+
+            _board.PiecesChanged += PropertyChangedOnPieces;
+            _board.PiecesMoved += PiecesMoved;
+            _board.ListsChanged += ReloadAll;
+            _board.StartConditionUpdated += StartConditionUpdated;
+
+            InitializeLists();
         }
 
         public void PiecesMoved(object? indexFromAndWhere, int indexTo)
@@ -80,6 +89,17 @@ namespace Stratego.ViewModels
             ReloadField();
         }
 
+        [DependsOn(nameof(StartActive))]
+        bool CanStart(object par)
+        {
+            return StartActive;
+        }
+
+        private void StartConditionUpdated()
+        {
+            this.RaisePropertyChanged(nameof(StartActive));
+        }
+
         private void ReloadAll()
         {
             ReloadField();
@@ -115,17 +135,8 @@ namespace Stratego.ViewModels
                     _field.Add(new PieceViewModel((t as Piece)!));
         }
 
-        private async Task InitializeLists()
+        private void InitializeLists()
         {
-            Piece.Color color = await _client.GetColor();
-
-            _board = new Board(color);
-
-            _board.PiecesChanged += PropertyChangedOnPieces;
-            _board.PiecesMoved += PiecesMoved;
-            _board.ListsChanged += ReloadAll;
-
-
             foreach (ITileable t in _board.Field)
                 if (t is not Piece)
                     _field.Add(new TileViewModel((t as Tile)!));

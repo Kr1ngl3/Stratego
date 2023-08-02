@@ -10,16 +10,24 @@ using System.Collections;
 
 namespace StrategoServer
 {
-    class Simple
-    {
-
-    }
-
     class Start
     {
+        enum HandlerType
+        {
+            SendPlayerNumber,
+            WaitForColor,
+            SendOtherColor,
+            WaitForField,
+            SendField,
+            WaitForMove,
+            SendMove
+        }
 
-        private static Queue _queue0 = new Queue();
-        private static Queue _queue1 = new Queue();
+
+        private static Queue[] _queues = new Queue[] { new Queue(), new Queue()};
+        private static byte[][] _fields = new byte[][] { new byte[50], new byte[50] };
+        private static int _firstColor = -1;
+        const int FIELD_SIZE = 50;
 
         static void Main(string[] args)
         {
@@ -34,74 +42,67 @@ namespace StrategoServer
             listener.Start();
             Console.WriteLine("Listening");
 
-            for (int i = 0; i < 2; i++)
+            for (byte i = 0; i < 2; i++)
             {
                 client = await listener.AcceptTcpClientAsync();
-                if (i == 0)
-                    ThreadPool.QueueUserWorkItem(Player0Handler, client);
-                else
-                    ThreadPool.QueueUserWorkItem(Player1Handler, client);
+                ThreadPool.QueueUserWorkItem(PlayerHandler, new Tuple<TcpClient, byte>(client, i));
                 Console.WriteLine($"Player {i} connected");
             }
+            for (int i = 0; i < 2; i++)
+                _queues[i].Enqueue(HandlerType.SendPlayerNumber);
 
-            while (true)
-            {
-                int temp = int.Parse(Console.ReadLine());
-                if (temp == 0)
-                    _queue0.Enqueue(1);
-                else
-                    _queue1.Enqueue(1);
-            }
+            Console.ReadLine();
         }
 
-        private static async void Player0Handler(object client)
+        private static async void PlayerHandler(object clientAndPlayer)
         {
-            using (NetworkStream stream = (client as TcpClient).GetStream())
+            TcpClient client = (clientAndPlayer as Tuple<TcpClient, byte>).Item1;
+            byte playerNumber = (clientAndPlayer as Tuple<TcpClient, byte>).Item2;
+
+            using (NetworkStream stream = client.GetStream())
             {
                 while (true)
                 {
-                    if (_queue0.Count == 0)
+                    if (_queues[playerNumber].Count == 0)
                         continue;
-                    switch ((int)_queue0.Dequeue())
+                    switch ((HandlerType)_queues[playerNumber].Dequeue())
                     {
-                        case 1:
-                            await SendColor(stream);
+                        case HandlerType.SendPlayerNumber:
+                            await SendMessage(stream, new byte[] { playerNumber });
+                            Console.WriteLine($"SendPlayerNumber to {playerNumber}");
+                            if (playerNumber == 1)
+                                _queues[0].Enqueue(HandlerType.WaitForColor);
                             break;
-                        case 2:
-                            await SendMessage(stream, "from other client");
+                        case HandlerType.WaitForColor:
+                            Console.WriteLine($"Waiting for {playerNumber}'s color");
+                            byte[] temp = await RecieveMessage(stream);
+                            _firstColor = temp[0];
+                            _queues[1].Enqueue(HandlerType.SendOtherColor);
+                            break;
+                        case HandlerType.SendOtherColor:
+                            await SendMessage(stream, new byte[] { (byte)OtherNumber(_firstColor) });
+                            Console.WriteLine($"SendOtherColor to {playerNumber}");
+
+                            for (int i = 0; i < 2; i++)
+                                _queues[i].Enqueue(HandlerType.WaitForField);
+                            break;
+                        case HandlerType.WaitForField:
+                            Console.WriteLine($"waiting for field from {playerNumber}");
+                            _fields[OtherNumber(playerNumber)] = await RecieveMessage(stream);
+                            _queues[OtherNumber(playerNumber)].Enqueue(HandlerType.SendField);
+                            break;
+                        case HandlerType.SendField:
+                            await SendMessage(stream, _fields[playerNumber]);
+                            Console.WriteLine($"Send Field to {playerNumber}");
+
+                            if (playerNumber == 0)
+                                _queues[0].Enqueue(HandlerType.WaitForMove);
+                            break;
+                        default:
                             break;
                     }
-                    await RecieveMessage(stream);
                 }
             }
-        }
-
-        private static async void Player1Handler(object client)
-        {
-            using (NetworkStream stream = (client as TcpClient).GetStream())
-            {
-                while (true)
-                {
-                    if (_queue1.Count == 0)
-                        continue;
-                    switch ((int)_queue1.Dequeue())
-                    {
-                        case 1:
-                            await SendMessage(stream, "from server");
-                            break;
-                        case 2:
-                            await SendMessage(stream, "from other client");
-                            break;
-                    }
-                }
-            }
-        }
-
-        static async Task SendColor(NetworkStream stream)
-        {
-            Random random = new Random();
-            byte[] message = new byte[] { 1, (byte)random.Next(2)};
-            await SendMessage(stream, message);
         }
 
         static async Task SendMessage(NetworkStream stream, string message)
@@ -115,15 +116,20 @@ namespace StrategoServer
             await stream.WriteAsync(message, 0, message.Length);
         }
 
-
-
-        static async Task RecieveMessage(NetworkStream stream)
+        static int OtherNumber(int n)
         {
-            var buffer = new byte[1_024];
+            return 1 & ~_firstColor;
+        }
+
+        static async Task<byte[]> RecieveMessage(NetworkStream stream)
+        {
+            byte[] buffer = new byte[1_024];
             int received = await stream.ReadAsync(buffer, 0, 1_024);
 
-            var message = Encoding.UTF8.GetString(buffer, 0, received);
-            Console.WriteLine($"Message received: \"{message}\"");
+            byte[] temp = new byte[received];
+            for (int i = 0; i < received; i++)
+                temp[i] = buffer[i];
+            return temp;
         }
     }
 }

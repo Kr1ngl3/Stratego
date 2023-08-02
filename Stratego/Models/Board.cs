@@ -8,6 +8,7 @@ using System.Linq;
 using System.Numerics;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Stratego.Models
@@ -19,6 +20,7 @@ namespace Stratego.Models
             Prep,
             Game
         }
+        private readonly Client _client;
         private GameState _state = GameState.Prep;
         private List<ITileable> _field = new List<ITileable>(BOARD_SIZE);
         private List<ITileable> _deadPieces = new List<ITileable>(PIECE_COUNT);
@@ -37,16 +39,19 @@ namespace Stratego.Models
         public int DeadPiecesCount => _deadPieces.Where(t => t is Piece).Count();
         public bool EnemyPieceDataRecieved => _enemyPieceData is not null;
 
-        public bool YourTurn { get; set; } = true;
+        public bool YourTurn { get; private set; } = true;
 
         public event Action PiecesChanged = null!;
         public event Action ListsChanged = null!;
+        public event Action StartConditionUpdated = null!;
         public event EventHandler<int> PiecesMoved = null!;
 
-        public Board(Piece.Color color)
+        public Board(Piece.Color color, Client client)
         {
             _color = color;
+            _client = client;
             InitializeBoard(true);
+            ThreadPool.QueueUserWorkItem(GetEnemyField, null);
         }
 
 
@@ -158,6 +163,8 @@ namespace Stratego.Models
         {
             if (_selectedPiece is null)
                 return;
+            if (_state == GameState.Prep)
+                StartConditionUpdated.Invoke();
             Move(_selectedPiece, t);
         }
         /// <summary>
@@ -426,6 +433,12 @@ namespace Stratego.Models
             else if (_field[CoordToIndex(v)] is Tile)
                 (_field[CoordToIndex(v)] as Tile)!.IsSelectable = true;
             return true;
+        }
+
+        private async void GetEnemyField(object? obj)
+        {
+            _enemyPieceData = await _client.GetField();
+            StartConditionUpdated.Invoke();
         }
 
         const int PIECE_COUNT = 40;

@@ -32,7 +32,8 @@ namespace Stratego.Models
         private readonly Color _color;
         private bool _isSelectable { get 
             {
-                if (_color != _board.Color)
+                if (!_board.YourTurn 
+                    || _color != _board.Color)
                     return false;
 
                 if (_board.State == Board.GameState.Prep)
