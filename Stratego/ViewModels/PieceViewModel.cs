@@ -1,10 +1,12 @@
-﻿using Avalonia.Media;
+﻿using Avalonia;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using ReactiveUI;
 using Stratego.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -13,8 +15,48 @@ namespace Stratego.ViewModels
     class PieceViewModel : ViewModelBase, ITileableViewModel
     {
         private readonly Piece _piece;
+        private Vector2? _target = null;
+        private bool _vanish = false;
+        private bool _appear = false;
+        private bool _attack = false;
+        private Vector2? _animationStart = null;
 
+        public bool IsOtherColor => _piece.IsOtherColor;
+        public double Size => GameViewModel.s_pieceSize;
         public Bitmap Image => _piece.Image;
+        public Vector2? Target { get => _target; 
+            set {
+                if (value is null)
+                    _animationStart = null;
+                this.RaiseAndSetIfChanged(ref _target, value, nameof(Target));
+            } }
+        public bool Vanish { get => _vanish; set => this.RaiseAndSetIfChanged(ref _vanish, value, nameof(Vanish)); }
+        public bool Appear { get => _appear; set => this.RaiseAndSetIfChanged(ref _appear, value, nameof(Appear)); }
+        public bool Attack { get => _attack; 
+            set {
+                if (!value)
+                    _animationStart = new Vector2((float)X, (float)Y);
+                this.RaiseAndSetIfChanged(ref _attack, value, nameof(Attack));
+            } }
+
+        public double X {
+            get {
+                if (Attack)
+                    return (Target ?? Vector2.Zero).Y == 0 ? ReduceLength((Target ?? Vector2.Zero).X, GameViewModel.s_pieceSize * .5) : (Target ?? Vector2.Zero).X;
+                else
+                    return (Target ?? Vector2.Zero).X;
+            } }
+        public double Y {
+            get {
+                if (Attack)
+                    return (Target ?? Vector2.Zero).X == 0 ? ReduceLength((Target ?? Vector2.Zero).Y, GameViewModel.s_pieceSize * .5) : (Target ?? Vector2.Zero).Y;
+                else
+                    return (Target ?? Vector2.Zero).Y;
+            } }
+
+        public double StartX => (_animationStart ?? Vector2.Zero).X;
+        public double StartY => (_animationStart ?? Vector2.Zero).Y;
+
         public ISolidColorBrush Background { get 
             {
                 if (_piece.IsSelected)
@@ -31,11 +73,11 @@ namespace Stratego.ViewModels
             _piece = piece;
         }
 
-        public void Click()
+        public async void Click()
         {
             if (_piece.CanBeTargeted)
             {
-                _piece.Attacked();
+                await _piece.Attacked();
             }
             else
             {
@@ -52,6 +94,11 @@ namespace Stratego.ViewModels
         public void SelectedChanged()
         {
             this.RaisePropertyChanged(nameof(Background));
+        }
+
+        private double ReduceLength(double length, double reduction)
+        {
+            return Math.CopySign(Math.Abs(length) - reduction,length);
         }
     }
 }

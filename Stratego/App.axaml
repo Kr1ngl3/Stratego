@@ -9,6 +9,5 @@
 
     <Application.Styles>
         <FluentTheme Mode="Light" />
-        <StyleInclude Source="/MainStyle.axaml" />
     </Application.Styles>
 </Application>

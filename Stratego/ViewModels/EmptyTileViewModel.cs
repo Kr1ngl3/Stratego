@@ -15,12 +15,12 @@ namespace Stratego.ViewModels
 {
     class TileViewModel : ViewModelBase, ITileableViewModel
     {
-        private readonly Tile _tile;
+        private readonly EmptyTile _tile;
 
         public virtual Bitmap Image => _tile.Image;
         public virtual ISolidColorBrush Background => _tile.IsSelectable ? Brushes.GreenYellow : Brushes.Transparent;
 
-        public TileViewModel(Tile tile)
+        public TileViewModel(EmptyTile tile)
         {
             _tile = tile;
         }

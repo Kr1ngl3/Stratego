@@ -11,6 +11,10 @@
     Icon="/Assets/avalonia-logo.ico"
     mc:Ignorable="d">
 
+    <!--
+        ContentControl that displays the current view,
+        based on what the current view model is, using ViewLocator
+    -->
     <ContentControl Content="{Binding CurrentViewModel}" />
 
 </Window>

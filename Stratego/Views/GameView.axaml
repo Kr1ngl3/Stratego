@@ -7,22 +7,77 @@
     xmlns:vm="using:Stratego.ViewModels"
     d:DesignHeight="450"
     d:DesignWidth="800"
-    Background="Black"
+    Background="White"
     mc:Ignorable="d">
 
+    <UserControl.Styles>
+        <Style Selector="ContentControl.move">
+            <Style.Animations>
+                <Animation
+                    Easing="QuinticEaseIn"
+                    FillMode="Forward"
+                    Duration="0:0:1">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="ZIndex" Value="1" />
+                        <Setter Property="TranslateTransform.X" Value="{Binding StartX}" />
+                        <Setter Property="TranslateTransform.Y" Value="{Binding StartY}" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="ZIndex" Value="0" />
+                        <Setter Property="TranslateTransform.X" Value="{Binding X}" />
+                        <Setter Property="TranslateTransform.Y" Value="{Binding Y}" />
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+        <Style Selector="ContentControl.vanish">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Style.Animations>
+                <Animation Easing="QuinticEaseIn" Duration="0:0:0.5">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Height" Value="{Binding Size}" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Height" Value="0" />
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+        <Style Selector="ContentControl.appear">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Style.Animations>
+                <Animation Easing="QuinticEaseIn" Duration="0:0:0.5">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Height" Value="0" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Height" Value="{Binding Size}" />
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+        <Style Selector="Button:pointerover.piece /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{TemplateBinding Background}" />
+        </Style>
+    </UserControl.Styles>
     <!--  Resource for data template of piece  -->
     <UserControl.Resources>
         <DataTemplate x:Key="PieceDataTemplate">
-            <Button
-                Padding="0"
-                Background="{Binding Background}"
-                Classes="piece"
-                Command="{Binding Click}">
-                <Grid>
-                    <Image Source="{Binding BackPiece}" />
-                    <Image Source="{Binding Image}" />
-                </Grid>
-            </Button>
+            <ContentControl
+                Classes.appear="{Binding Appear}"
+                Classes.move="{Binding Target, Converter={x:Static ObjectConverters.IsNotNull}}"
+                Classes.vanish="{Binding Vanish}">
+                <Button
+                    Padding="0"
+                    Background="{Binding Background}"
+                    Classes="piece"
+                    Command="{Binding Click}">
+                    <Grid>
+                        <Image Source="{Binding BackPiece}" />
+                        <Image Source="{Binding Image}" />
+                    </Grid>
+                </Button>
+            </ContentControl>
         </DataTemplate>
     </UserControl.Resources>
 
@@ -58,7 +113,10 @@
                 HorizontalAlignment="Center"
                 Source="{Binding Background}"
                 Stretch="Fill" />
-            <ItemsControl ItemTemplate="{StaticResource PieceDataTemplate}" Items="{Binding Field}">
+            <ItemsControl
+                x:Name="field"
+                ItemTemplate="{StaticResource PieceDataTemplate}"
+                Items="{Binding Field}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Rows="10" />
@@ -70,19 +128,11 @@
             <Button Background="Red" Command="{Binding Chaos}">
                 Chaos
             </Button>
-            <Button Background="Blue" Command="{Binding Enemy}">
-                Current / Chaos enemy field
+            <Button Background="Blue" Command="{Binding Ready}">
+                Ready/Send field
             </Button>
             <Button Background="Yellow" Command="{Binding Clear}">
                 Clear
-            </Button>
-            <Button Background="Green" Command="{Binding Start}">
-                Start
-            </Button>
-        </StackPanel>
-        <StackPanel IsVisible="{Binding !GameInPrep}" Orientation="Vertical">
-            <Button Background="Red" Command="{Binding EnemyMove}">
-                move 1 down
             </Button>
         </StackPanel>
     </Grid>

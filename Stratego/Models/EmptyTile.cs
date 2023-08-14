@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Stratego.Models
 {
-    class Tile : ITileable
+    class EmptyTile : ITileable
     {
 
         // mostly to tell what collection it is in
@@ -23,7 +23,7 @@ namespace Stratego.Models
         public bool Dead => _dead;
         public Bitmap Image => s_image;
 
-        public Tile(bool dead, Board board)
+        public EmptyTile(bool dead, Board board)
         {
             _board = board;
             _dead = dead;

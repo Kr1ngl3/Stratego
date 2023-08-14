@@ -1,5 +1,6 @@
 ﻿using Avalonia.Media.Imaging;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Stratego.Models
 {
@@ -28,23 +29,26 @@ namespace Stratego.Models
 
         private readonly Board _board;
         private readonly Type _type;
+        private readonly Color _playerColor;
+
         public new byte GetType => (byte)_type;
         private readonly Color _color;
-        private bool _isSelectable { get 
-            {
-                if (_color != _board.Color)
+        private bool _isSelectable { 
+            get {
+                if (!_board.YourTurn 
+                    || _color != _playerColor)
                     return false;
 
                 if (_board.State == Board.GameState.Prep)
                     return true;
                 else
-                    return _type != Type.Flag && _type != Type.Bomb;
+                    return _type != Type.Flag && _type != Type.Bomb && !Dead;
             } }
 
         private bool _isSelected = false;
 
-        public Bitmap Image { get
-            {
+        public Bitmap Image { 
+            get {
                 if (!IsOtherColor || Highlighted)
                     return s_images[(int)_type];
                 else
@@ -56,15 +60,16 @@ namespace Stratego.Models
         public bool IsSelected => _isSelected;
         public bool CanBeTargeted { get; set; } = false;
         public bool IsBomb => _type == Type.Bomb;
-        public bool IsOtherColor => _color != _board.Color;
+        public bool IsOtherColor => _color != _playerColor;
         public bool Highlighted { get; set; } = false;
 
 
-        public Piece(Type type, Color color, Board board)
+        public Piece(Type type, Color color, Board board, Color playerColor)
         {
             _board = board;
             _type = type;
             _color = color;
+            _playerColor = playerColor;
         }
 
         public void Unselect()
@@ -84,9 +89,9 @@ namespace Stratego.Models
             }
         }
 
-        public void Attacked()
+        public async Task Attacked()
         {
-            _board.Attacked(this);
+            await _board.Attacked(this);
         }
 
         public static Color OtherColor(Color c)
