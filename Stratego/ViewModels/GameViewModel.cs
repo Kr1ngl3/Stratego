@@ -120,7 +120,7 @@ namespace Stratego.ViewModels
             PieceViewModel pieceToKill = (_field[(int)pieceIndex!] as PieceViewModel)!;
             pieceToKill.Vanish = true;
             await AnimatePiece(_field, (int)pieceIndex, 500);
-            _field[(int)pieceIndex!] = new TileViewModel((EmptyTile)_board.Field.AsList()[(int)pieceIndex]);
+            _field[(int)pieceIndex!] = new EmptyTileViewModel((EmptyTile)_board.Field.AsList()[(int)pieceIndex]);
             pieceToKill.Vanish = false;
 
             if (pieceToKill.IsOtherColor)
@@ -180,7 +180,7 @@ namespace Stratego.ViewModels
         private async Task AnimatePiece(AvaloniaList<ITileableViewModel> list, int index, int animeationTime)
         {
             PieceViewModel temp = (PieceViewModel)list[index];
-            list[index] = new TileViewModel(new EmptyTile(false, _board));
+            list[index] = new EmptyTileViewModel(new EmptyTile(false, _board));
             list[index] = temp;
             await Task.Delay(animeationTime - 20);
         }
@@ -198,13 +198,13 @@ namespace Stratego.ViewModels
 
             foreach (ITileable t in _board.Field)
                 if (t is not Piece)
-                    _field.Add(new TileViewModel((t as EmptyTile)!));
+                    _field.Add(new EmptyTileViewModel((t as EmptyTile)!));
                 else
                     _field.Add(new PieceViewModel((t as Piece)!));
 
             foreach (ITileable t in _board.DeadPieces)
                 if (t is not Piece)
-                    _deadPieces.Add(new TileViewModel((t as EmptyTile)!));
+                    _deadPieces.Add(new EmptyTileViewModel((t as EmptyTile)!));
                 else
                     _deadPieces.Add(new PieceViewModel((t as Piece)!));
         }

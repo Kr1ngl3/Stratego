@@ -13,14 +13,14 @@ using System.Threading.Tasks;
 
 namespace Stratego.ViewModels
 {
-    class TileViewModel : ViewModelBase, ITileableViewModel
+    class EmptyTileViewModel : ViewModelBase, ITileableViewModel
     {
         private readonly EmptyTile _tile;
 
         public virtual Bitmap Image => _tile.Image;
         public virtual ISolidColorBrush Background => _tile.IsSelectable ? Brushes.GreenYellow : Brushes.Transparent;
 
-        public TileViewModel(EmptyTile tile)
+        public EmptyTileViewModel(EmptyTile tile)
         {
             _tile = tile;
         }
