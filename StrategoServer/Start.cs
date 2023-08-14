@@ -71,8 +71,6 @@ namespace StrategoServer
 
                 Console.WriteLine($"Player {i} connected");
             }
-            for (int i = 0; i < 2; i++)
-                _queues[i].Enqueue(HandlerType.SendPlayerNumber);
 
             // enqueues send player number handlertype for each player
             for (int i = 0; i < 2; i++)
@@ -133,7 +131,7 @@ namespace StrategoServer
                                 await SendMessage(stream, new byte[] { (byte)OtherNumber(_firstColor) });
                                 Console.WriteLine($"SendOtherColor to {playerNumber}");
 
-                                // now both players have gotten their color and can begin setting up their field, both thread will now wait for field
+                                // now both players have gotten their color and can begin setting up their field, both threads will now wait for field
                                 for (int i = 0; i < 2; i++)
                                     _queues[i].Enqueue(HandlerType.WaitForField);
                                 break;
