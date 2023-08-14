@@ -65,7 +65,7 @@ namespace Stratego.ViewModels
             FailedToConnect = false;
             ThreadPool.QueueUserWorkItem(_ => GetPlayer());
         }
-        
+
         /// <summary>
         /// Called from color buttons, and uses client to send color to other player and changes view model to game
         /// </summary>
@@ -89,7 +89,7 @@ namespace Stratego.ViewModels
                 _client.ConnectToServer();
             }
             catch (Exception)
-            {
+        {
                 // if it fails to connect to the server
                 Status = "Failed to connect to server ";
                 FailedToConnect = true;

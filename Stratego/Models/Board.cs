@@ -120,6 +120,7 @@ namespace Stratego.Models
             _color = color;
             _client = client;
             InitializeBoard(true);
+            ThreadPool.QueueUserWorkItem(GetEnemyField, null);
         }
 
 

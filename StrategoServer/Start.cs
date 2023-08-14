@@ -71,6 +71,8 @@ namespace StrategoServer
 
                 Console.WriteLine($"Player {i} connected");
             }
+            for (int i = 0; i < 2; i++)
+                _queues[i].Enqueue(HandlerType.SendPlayerNumber);
 
             // enqueues send player number handlertype for each player
             for (int i = 0; i < 2; i++)
