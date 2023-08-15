@@ -1,15 +1,11 @@
 ﻿using Avalonia.Media.Imaging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using LinkedBaseAndWrapperList;
 
 namespace Stratego.Models
 {
-    interface ITileable
+    interface ITileable : IModel
     {
-        public byte GetType {get;}
+        public byte GetType { get; }
         public bool Dead { get; }
         public Bitmap Image { get; }
     }

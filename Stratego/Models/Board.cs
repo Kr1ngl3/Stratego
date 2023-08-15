@@ -12,6 +12,9 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using LinkedBaseAndWrapperList;
+using Stratego.ViewModels;
+using JetBrains.Annotations;
 
 namespace Stratego.Models
 {
@@ -25,9 +28,9 @@ namespace Stratego.Models
         private readonly Client _client;
         private readonly int _playerNumber;
         private GameState _state = GameState.Prep;
-        private List<ITileable> _field = new List<ITileable>(BOARD_SIZE);
-        private List<ITileable> _deadPieces = new List<ITileable>(PIECE_COUNT);
-        private List<ITileable> _enemyDeadPieces = new List<ITileable>(PIECE_COUNT);
+        private BaseList<ITileable, ITileableViewModel> _field;
+        private BaseList<ITileable, ITileableViewModel> _deadPieces;
+        private BaseList<ITileable, ITileableViewModel> _enemyDeadPieces;
         private Piece.Color _color;
         private byte[]? _enemyPieceData = null;
 
@@ -35,20 +38,14 @@ namespace Stratego.Models
         private Piece? _highlightedPiece = null;
 
         public GameState State => _state;
-        public IEnumerable<ITileable> Field => _field;
-        public IEnumerable<ITileable> DeadPieces => _deadPieces;
-        public IEnumerable<ITileable> EnemyDeadPieces => _enemyDeadPieces;
         public int DeadPiecesCount => _deadPieces.Where(t => t is Piece).Count();
         public bool EnemyPieceDataRecieved => _enemyPieceData is not null;
 
         public bool YourTurn { get; private set; } = true;
 
-        public event Action PiecesChanged = null!;
-        public event Action ListsChanged = null!;
-        public event Action StartConditionUpdated = null!;
-        public event EventHandler<int> PieceAttack = null!;
-        public event EventHandler PieceDie = null!;
-        public event EventHandler<int> PiecesMoved = null!;
+        public event Action? PiecesChanged;
+        public event Action? StartConditionUpdated;
+        public event EventHandler<AnimationEventArgs>? AnimatePiece;
         
         const int PIECE_COUNT = 40;
         const int BOARD_SIZE = 100;
@@ -114,8 +111,12 @@ namespace Stratego.Models
             47
         };
 
-        public Board(Piece.Color color, Client client, int playerNumber)
+        public Board(Piece.Color color, Client client, int playerNumber, BaseList<ITileable, ITileableViewModel> field, BaseList<ITileable, ITileableViewModel> deadPieces, BaseList<ITileable, ITileableViewModel> enemyDeadPieces)
         {
+            _field = field;
+            _deadPieces = deadPieces;
+            _enemyDeadPieces = enemyDeadPieces;
+
             _playerNumber = playerNumber;
             _color = color;
             _client = client;
@@ -178,7 +179,7 @@ namespace Stratego.Models
                     foreach (Vector2 n in GetNeighbors(coord))
                         CheckAndChangeColor(n);
             }
-            PiecesChanged.Invoke();
+            PiecesChanged?.Invoke();
         }
 
         /// <summary>
@@ -203,8 +204,7 @@ namespace Stratego.Models
             {
                 int index = queue.Dequeue();
                 exclusive.Add(index);
-                (_deadPieces[i] as Piece)!.Select();
-                (_field[index] as EmptyTile)!.Move();
+                _ = Move((_deadPieces[i] as Piece)!, (_field[index] as EmptyTile)!);
             }
 
             queue.Clear();
@@ -222,26 +222,26 @@ namespace Stratego.Models
                         continue;
                     break;
                 }
-                (_deadPieces[i] as Piece)!.Select();
-                (_field[index] as EmptyTile)!.Move();
+                _ = Move((_deadPieces[i] as Piece)!, (_field[index] as EmptyTile)!);
+
             }
         }
 
-        public void Move(EmptyTile t)
+        public async Task Move(EmptyTile t)
         {
             if (_selectedPiece is null)
                 return;
-            if (_state == GameState.Prep)
-                StartConditionUpdated.Invoke();
-            Move(_selectedPiece, t);
+            await Move(_selectedPiece, t);
         }
         /// <summary>
         /// The function that moves a piece to a tile
         /// only happens when a piece is selected and a selectable tile was clicked
         /// </summary>
         /// <param name="t"> the tile the selected piece is moving to </param>
-        public void Move(Piece p, EmptyTile t)
+        public async Task Move(Piece p, EmptyTile t)
         {
+            if (_state == GameState.Prep)
+                YourTurn = false;
             UnselectPrev();
             int indexTo = _field.IndexOf(t);
 
@@ -250,24 +250,37 @@ namespace Stratego.Models
             if (p.Dead)
             {
                 indexFrom = _deadPieces.IndexOf(p);
+
+                if (_state == GameState.Game && YourTurn)
+                    SendMove(new byte[] { (byte)indexFrom, (byte)indexTo });
+
+                await RaiseAnimatePiece(p, AnimationEventArgs.Type.Vanish);
+                p.IsVisible = false;
                 _deadPieces[indexFrom] = _field[indexTo];
             }
             else
             {
                 indexFrom = _field.IndexOf(p);
+
+                if (_state == GameState.Game && YourTurn)
+                    SendMove(new byte[] { (byte)indexFrom, (byte)indexTo });
+
+                await RaiseAnimatePiece(p, AnimationEventArgs.Type.Move, indexFrom, indexTo);
                 _field[indexFrom] = _field[indexTo];
             }
-
             _field[indexTo] = p;
+            p.IsVisible = true;
+            if (p.Dead)
+            {
+                await RaiseAnimatePiece(p, AnimationEventArgs.Type.Appear);
+                p.Dead = false;
+            }
 
-            Tuple<int, bool> indexFromAndWhere = new(indexFrom, p.Dead);
-            p.Dead = false;
-
-
-            PiecesChanged.Invoke();
-            PiecesMoved.Invoke(indexFromAndWhere, indexTo);
-            if (_state == GameState.Game && YourTurn)
-                SendMove(new byte[] { (byte)indexFrom, (byte)indexTo});
+            if (_state == GameState.Prep)
+            {
+                YourTurn = true;
+                StartConditionUpdated?.Invoke();
+            }
         }
 
         public async void OponentMove(byte[] data)
@@ -277,7 +290,7 @@ namespace Stratego.Models
             int indexTo = 99 - data[1];
 
             if (_field[indexTo] is EmptyTile)
-                Move((_field[indexFrom] as Piece)!, (_field[indexTo] as EmptyTile)!);
+                await Move((_field[indexFrom] as Piece)!, (_field[indexTo] as EmptyTile)!);
             else
                 await Attacked((_field[indexFrom] as Piece)!, (_field[indexTo] as Piece)!);
             YourTurn = true;
@@ -292,31 +305,27 @@ namespace Stratego.Models
         public async Task Attacked(Piece attacker, Piece defender)
         {
             UnselectPrev();
-            PiecesChanged.Invoke();
             if (YourTurn)
                 SendMove(new byte[] { (byte)_field.IndexOf(attacker), (byte)_field.IndexOf(defender) });
 
-            PieceAttack.Invoke(_field.IndexOf(attacker), (byte)_field.IndexOf(defender));
-            // wait for attack/move animation + ekstra buffer
-            await Task.Delay(1200);
+            await RaiseAnimatePiece(attacker, AnimationEventArgs.Type.Attack, _field.IndexOf(attacker), _field.IndexOf(defender));
             
             if (((Piece.Type)attacker.GetType == Piece.Type.Miner && (Piece.Type)defender.GetType == Piece.Type.Bomb)
                 || ((Piece.Type)attacker.GetType == Piece.Type.Spy && (Piece.Type)defender.GetType == Piece.Type.Marshal)
                 || (attacker.GetType > defender.GetType))
             {
-                if (!YourTurn)
-                    HighlightEnemy(attacker);
+                //if (!YourTurn)
+                //    HighlightEnemy(attacker);
                 await KillAndMove(attacker, defender);
             }
             else if (attacker.GetType == defender.GetType)
             {
-                await Kill(defender);
                 await Kill(attacker);
+                await Kill(defender);
             }
             else
             {
-                HighlightEnemy(defender);
-                PiecesChanged.Invoke();
+                //HighlightEnemy(defender);
                 await Kill(attacker);
             }
 
@@ -339,8 +348,7 @@ namespace Stratego.Models
             if (firstTime)
                 return;
 
-            ListsChanged.Invoke();
-            StartConditionUpdated.Invoke();
+            StartConditionUpdated?.Invoke();
         }
 
         /// <summary>
@@ -358,13 +366,12 @@ namespace Stratego.Models
             _deadPieces.Clear();
             ConstructEnemyField(_enemyPieceData);
             _state = GameState.Game;
-            ListsChanged.Invoke();
         }
 
         public void Ready()
         {
             YourTurn = false;
-            StartConditionUpdated.Invoke();
+            StartConditionUpdated?.Invoke();
             byte[] temp = SerializeField();
             _client.SendField(temp);
 
@@ -374,6 +381,8 @@ namespace Stratego.Models
         private async Task<int> Kill(Piece p)
         {
             p.Dead = true;
+            p.IsVisible = false;
+            await RaiseAnimatePiece(p, AnimationEventArgs.Type.Vanish);
             int index = _field.IndexOf(p);
 
             if (p.IsOtherColor)
@@ -384,18 +393,18 @@ namespace Stratego.Models
             }
             else
                 _deadPieces.Add(p);
-
+            p.IsVisible = true;
             _field[index] = new EmptyTile(false, this);
+            await RaiseAnimatePiece(p, AnimationEventArgs.Type.Appear);
 
-            PieceDie.Invoke(index, null!);
-            await Task.Delay(1200);
             return index;
         }
 
         private async Task KillAndMove(Piece attacker, Piece defender)
         {
+
             int index = await Kill(defender);
-            Move(attacker, (_field[index] as EmptyTile)!);
+            await Move(attacker, (_field[index] as EmptyTile)!);
         }
 
         /// <summary>
@@ -409,19 +418,12 @@ namespace Stratego.Models
             _selectedPiece.Unselect();
             _selectedPiece = null;
 
-            UnhighlightTiles();
-        }
-
-        /// <summary>
-        /// unhighlights tiles, also happens every time a piece is clicked
-        /// </summary>
-        private void UnhighlightTiles()
-        {
             foreach (ITileable t in _field)
                 if (t is EmptyTile)
                     (t as EmptyTile)!.IsSelectable = false;
                 else
                     (t as Piece)!.CanBeTargeted = false;
+            PiecesChanged?.Invoke();
         }
 
         private void UnHighlightEnemy()
@@ -430,12 +432,14 @@ namespace Stratego.Models
                 return;
             _highlightedPiece.Highlighted = false;
             _highlightedPiece = null;
+            PiecesChanged?.Invoke();
         }
 
         private void HighlightEnemy(Piece piece)
         {
             _highlightedPiece = piece;
             piece.Highlighted = true;
+            PiecesChanged?.Invoke();
         }
 
         /// <summary>
@@ -545,6 +549,40 @@ namespace Stratego.Models
             _client.SendMove(move);
             YourTurn = false;
             ThreadPool.QueueUserWorkItem(GetMove, null);
+        }
+
+        private async Task RaiseAnimatePiece(Piece piece, AnimationEventArgs.Type type, int? startIndex = null, int? targetIndex = null)
+        {
+            piece.IsAnimating = true;
+            if (startIndex is null && targetIndex is null)
+                AnimatePiece?.Invoke(piece, new AnimationEventArgs(type));
+            else
+                AnimatePiece?.Invoke(piece, new AnimationEventArgs(type, new Vector2((targetIndex % 10 - startIndex % 10)!.Value * GameViewModel.s_pieceSize, (targetIndex / 10 - startIndex / 10)!.Value * GameViewModel.s_pieceSize)));
+
+            RefreshPiece(piece);
+
+            while (piece.IsAnimating)
+                await Task.Delay(1);
+        }
+
+        private void RefreshPiece(Piece p)
+        {
+            int index;
+            BaseList<ITileable, ITileableViewModel> list = ListAndIndexOfPiece(p, out index);
+            list.Swap(0,index);
+            list.Swap(0,index);
+        }
+
+        private BaseList<ITileable, ITileableViewModel> ListAndIndexOfPiece(Piece p, out int index)
+        {
+            index = _field.IndexOf(p);
+            if (index != -1)
+                return _field;
+            index = _deadPieces.IndexOf(p);
+            if (index != -1)
+                return _deadPieces;
+            index = _enemyDeadPieces.IndexOf(p);
+            return _enemyDeadPieces;
         }
 
     }

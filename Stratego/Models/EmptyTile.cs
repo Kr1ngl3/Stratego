@@ -1,9 +1,12 @@
 ﻿using Avalonia.Media.Imaging;
+using LinkedBaseAndWrapperList;
+using Stratego.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -23,19 +26,20 @@ namespace Stratego.Models
         public bool Dead => _dead;
         public Bitmap Image => s_image;
 
+        public IWrapper ToWrapper => new EmptyTileViewModel(this);
+
         public EmptyTile(bool dead, Board board)
         {
             _board = board;
             _dead = dead;
         }
 
-        public bool Move()
+        public async void Move()
         {
             if (!IsSelectable)
-                return false;
+                return;
             
-            _board.Move(this);
-            return true;
+            await _board.Move(this);
         }
 
         static Bitmap s_image = new Bitmap(Directory.GetCurrentDirectory() + "/Assets/empty.png");

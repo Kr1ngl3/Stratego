@@ -19,6 +19,7 @@ namespace Stratego.ViewModels
         private bool _vanish = false;
         private bool _appear = false;
         private bool _attack = false;
+        private bool _isVisible;
         private Vector2? _animationStart = null;
 
         public bool IsOtherColor => _piece.IsOtherColor;
@@ -32,6 +33,7 @@ namespace Stratego.ViewModels
             } }
         public bool Vanish { get => _vanish; set => this.RaiseAndSetIfChanged(ref _vanish, value, nameof(Vanish)); }
         public bool Appear { get => _appear; set => this.RaiseAndSetIfChanged(ref _appear, value, nameof(Appear)); }
+        public bool IsVisible { get => _isVisible; set => this.RaiseAndSetIfChanged(ref _isVisible, value, nameof(IsVisible)); }
         public bool Attack { get => _attack; 
             set {
                 if (!value)
@@ -42,14 +44,14 @@ namespace Stratego.ViewModels
         public double X {
             get {
                 if (Attack)
-                    return (Target ?? Vector2.Zero).Y == 0 ? ReduceLength((Target ?? Vector2.Zero).X, GameViewModel.s_pieceSize * .5) : (Target ?? Vector2.Zero).X;
+                    return (Target ?? Vector2.Zero).Y == 0 ? ReduceLength((Target ?? Vector2.Zero).X, Size * .5) : (Target ?? Vector2.Zero).X;
                 else
                     return (Target ?? Vector2.Zero).X;
             } }
         public double Y {
             get {
                 if (Attack)
-                    return (Target ?? Vector2.Zero).X == 0 ? ReduceLength((Target ?? Vector2.Zero).Y, GameViewModel.s_pieceSize * .5) : (Target ?? Vector2.Zero).Y;
+                    return (Target ?? Vector2.Zero).X == 0 ? ReduceLength((Target ?? Vector2.Zero).Y, Size * .5) : (Target ?? Vector2.Zero).Y;
                 else
                     return (Target ?? Vector2.Zero).Y;
             } }
@@ -71,6 +73,7 @@ namespace Stratego.ViewModels
         public PieceViewModel(Piece piece)
         {
             _piece = piece;
+            _isVisible = piece.IsVisible;
         }
 
         public async void Click()

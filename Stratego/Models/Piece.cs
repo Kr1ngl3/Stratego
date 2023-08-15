@@ -1,4 +1,6 @@
 ﻿using Avalonia.Media.Imaging;
+using LinkedBaseAndWrapperList;
+using Stratego.ViewModels;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -55,6 +57,7 @@ namespace Stratego.Models
                     return s_empty;
             } }
 
+        public bool IsAnimating { get; set; } = false;
         public bool Dead { get; set; } = true;
         public Bitmap BackPiece => _color == Color.Red ? s_redBackPiece : s_blueBackPiece;
         public bool IsSelected => _isSelected;
@@ -62,7 +65,9 @@ namespace Stratego.Models
         public bool IsBomb => _type == Type.Bomb;
         public bool IsOtherColor => _color != _playerColor;
         public bool Highlighted { get; set; } = false;
+        public bool IsVisible { get; set; } = true;
 
+        public IWrapper ToWrapper => new PieceViewModel(this);
 
         public Piece(Type type, Color color, Board board, Color playerColor)
         {

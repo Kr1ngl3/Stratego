@@ -15,15 +15,13 @@
             <Style.Animations>
                 <Animation
                     Easing="QuinticEaseIn"
-                    FillMode="Forward"
+                    FillMode="Both"
                     Duration="0:0:1">
                     <KeyFrame Cue="0%">
-                        <Setter Property="ZIndex" Value="1" />
                         <Setter Property="TranslateTransform.X" Value="{Binding StartX}" />
                         <Setter Property="TranslateTransform.Y" Value="{Binding StartY}" />
                     </KeyFrame>
                     <KeyFrame Cue="100%">
-                        <Setter Property="ZIndex" Value="0" />
                         <Setter Property="TranslateTransform.X" Value="{Binding X}" />
                         <Setter Property="TranslateTransform.Y" Value="{Binding Y}" />
                     </KeyFrame>
@@ -31,9 +29,8 @@
             </Style.Animations>
         </Style>
         <Style Selector="ContentControl.vanish">
-            <Setter Property="HorizontalAlignment" Value="Center" />
             <Style.Animations>
-                <Animation Easing="QuinticEaseIn" Duration="0:0:0.5">
+                <Animation Easing="QuinticEaseIn" Duration="0:0:0.5" FillMode="Forward" >
                     <KeyFrame Cue="0%">
                         <Setter Property="Height" Value="{Binding Size}" />
                     </KeyFrame>
@@ -44,9 +41,8 @@
             </Style.Animations>
         </Style>
         <Style Selector="ContentControl.appear">
-            <Setter Property="HorizontalAlignment" Value="Center" />
             <Style.Animations>
-                <Animation Easing="QuinticEaseIn" Duration="0:0:0.5">
+                <Animation Easing="QuinticEaseIn" Duration="0:0:0.5" FillMode="Backward" >
                     <KeyFrame Cue="0%">
                         <Setter Property="Height" Value="0" />
                     </KeyFrame>
@@ -63,11 +59,13 @@
     <!--  Resource for data template of piece  -->
     <UserControl.Resources>
         <DataTemplate x:Key="PieceDataTemplate">
-            <ContentControl
-                Classes.appear="{Binding Appear}"
-                Classes.move="{Binding Target, Converter={x:Static ObjectConverters.IsNotNull}}"
-                Classes.vanish="{Binding Vanish}">
-                <Button
+			<ContentControl
+				IsVisible="{Binding IsVisible}"
+				HorizontalAlignment="Center"
+				Classes.appear="{Binding Appear}"
+				Classes.move="{Binding Target, Converter={x:Static ObjectConverters.IsNotNull}}"
+				Classes.vanish="{Binding Vanish}">
+				<Button
                     Padding="0"
                     Background="{Binding Background}"
                     Classes="piece"
