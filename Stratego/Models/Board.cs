@@ -309,13 +309,18 @@ namespace Stratego.Models
                 SendMove(new byte[] { (byte)_field.IndexOf(attacker), (byte)_field.IndexOf(defender) });
 
             await RaiseAnimatePiece(attacker, AnimationEventArgs.Type.Attack, _field.IndexOf(attacker), _field.IndexOf(defender));
-            
+
+            if (attacker.IsOtherColor)
+                attacker.Highlighted = true;
+            else
+                defender.Highlighted = true;
+            PiecesChanged?.Invoke();
             if (((Piece.Type)attacker.GetType == Piece.Type.Miner && (Piece.Type)defender.GetType == Piece.Type.Bomb)
                 || ((Piece.Type)attacker.GetType == Piece.Type.Spy && (Piece.Type)defender.GetType == Piece.Type.Marshal)
                 || (attacker.GetType > defender.GetType))
             {
-                //if (!YourTurn)
-                //    HighlightEnemy(attacker);
+                if (attacker.IsOtherColor)
+                    HighlightEnemy(attacker);
                 await KillAndMove(attacker, defender);
             }
             else if (attacker.GetType == defender.GetType)
@@ -325,7 +330,8 @@ namespace Stratego.Models
             }
             else
             {
-                //HighlightEnemy(defender);
+                if (defender.IsOtherColor)
+                    HighlightEnemy(defender);
                 await Kill(attacker);
             }
 
@@ -388,7 +394,6 @@ namespace Stratego.Models
             if (p.IsOtherColor)
             {
                 p.CanBeTargeted = false;
-                p.Highlighted = true;
                 _enemyDeadPieces.Add(p);
             }
             else
@@ -437,6 +442,8 @@ namespace Stratego.Models
 
         private void HighlightEnemy(Piece piece)
         {
+            if (_highlightedPiece is not null)
+                _highlightedPiece.Highlighted = false;
             _highlightedPiece = piece;
             piece.Highlighted = true;
             PiecesChanged?.Invoke();

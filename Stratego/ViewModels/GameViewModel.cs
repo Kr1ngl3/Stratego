@@ -107,13 +107,12 @@ namespace Stratego.ViewModels
             if (e.Target is not null)
                 pv.Target = e.Target;
 
-            if (e.IsAppearing)
-                await Task.Run(async () =>
-                {
-                    // wait till after animation begins
-                    await Task.Delay(10);
-                    pv.IsVisible = true;
-                });
+            await Task.Run(async () =>
+            {
+                // wait till after animation begins
+                await Task.Delay(10);
+                pv.IsVisible = true;
+            });
             await Task.Delay(e.AnimationTime);
             
             pv.Appear = false;
